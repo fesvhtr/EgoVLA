@@ -49,7 +49,7 @@ Overall instruction for setup IsaacLab: https://isaac-sim.github.io/IsaacLab/mai
   ```
   pip install isaacsim==4.2.0.2 --extra-index-url https://pypi.nvidia.com
   ```
-* Clone [Ego Humanoid Manipulation Benchmark](https://github.com/RchalYang/Ego_Humanoid_Manipulation_Benchmark), then install it with the command in the instruction
+* Clone [Ego Humanoid Manipulation Benchmark](https://github.com/quincy-u/Ego_Humanoid_Manipulation_Benchmark), then install it with the command in the instruction
 
 
 ## 
