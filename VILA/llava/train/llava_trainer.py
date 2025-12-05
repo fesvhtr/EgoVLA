@@ -89,14 +89,11 @@ from transformers.utils import (
     is_torch_compile_available,
     is_torch_neuroncore_available,
     is_torch_npu_available,
-    is_torch_tpu_available,
     logging,
     strtobool,
 )
 
-if is_torch_tpu_available(check_device=False):
-    import torch_xla.core.xla_model as xm
-    import torch_xla.debug.metrics as met
+
 
 
 from packaging import version
@@ -1145,8 +1142,7 @@ class LLaVATrainer(Trainer):
             main_input_name = getattr(self.model, "main_input_name", "input_ids")
             inputs_decode = self._prepare_input(inputs[main_input_name]) if args.include_inputs_for_metrics else None
 
-            if is_torch_tpu_available():
-                xm.mark_step()
+
 
             # Update containers on host
             if loss is not None:

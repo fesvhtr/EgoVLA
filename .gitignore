@@ -169,3 +169,8 @@ pre_processing
 checkpoints
 
 .vscode
+
+mano_v1_2
+video_output
+video_output_EgoHandVLA
+video_output_EgoVLA

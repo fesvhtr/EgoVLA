@@ -1,0 +1,24 @@
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_50.hdf5, Trial Label: 0, Result: True 
+success: 1 reach_success: 1.0 
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_51.hdf5, Trial Label: 0, Result: True 
+success: 1 reach_success: 1.0 
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_52.hdf5, Trial Label: 0, Result: False 
+success: 0 reach_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_55.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_32.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_43.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_55.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_32.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Stack-Can, Room Idx: 1, Table Idx: 2, Episode Label: episode_43.hdf5, Trial Label: 0, Result: False 
+success: 0.0 place_success: 0.0 
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_50.hdf5, Trial Label: 0, Result: False 
+success: 0 reach_success: 1.0 
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_51.hdf5, Trial Label: 0, Result: True 
+success: 1 reach_success: 1.0 
+Task: Push-Box, Room Idx: 1, Table Idx: 2, Episode Label: episode_52.hdf5, Trial Label: 0, Result: True 
+success: 1 reach_success: 0.0 

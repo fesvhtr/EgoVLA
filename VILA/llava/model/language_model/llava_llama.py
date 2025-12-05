@@ -89,6 +89,9 @@ class LlavaLlamaConfig(LlavaConfig):
       merge_hand: bool=False,
       traj_decoder_type: str = "",
       pred_head: bool=False,
+      # NOTE: extra mano token (optional) for action decoder
+      extra_mano_dim: int = 0,
+      use_extra_mano_token: bool = False,
       **kwargs
     ):
       super().__init__(**kwargs)
@@ -130,6 +133,11 @@ class LlavaLlamaConfig(LlavaConfig):
 
       self.traj_decoder_type = traj_decoder_type
       self.pred_head = pred_head
+
+      # NOTE: new optional fields for extra mano embedding token
+      # default values keep old checkpoints / configs fully compatible
+      self.extra_mano_dim = extra_mano_dim
+      self.use_extra_mano_token = use_extra_mano_token
 
 
 from human_plan.utils.mano.model import (
@@ -213,6 +221,8 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
         raw_proprio_inputs_rot: Optional[torch.FloatTensor] = None,
         raw_proprio_inputs_handdof: Optional[torch.FloatTensor] = None,
         raw_proprio_inputs_hand_finger_tip: Optional[torch.FloatTensor] = None,
+        # Optional extra mano feature token, e.g. 55-dim vector
+        raw_mano_token: Optional[torch.FloatTensor] = None,
         # 
         raw_action_labels: Optional[torch.FloatTensor] = None,
         raw_action_masks: Optional[torch.Tensor] = None,
@@ -286,18 +296,24 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
 
         action_output = outputs.hidden_states[-1][output_mask]
 
+        # Build input dict for trajectory decoder. We keep previous keys and
+        # optionally attach an extra mano token if provided.
+        traj_input_dict = {
+          "proprio": raw_proprio_inputs,
+          "proprio_2d": raw_proprio_inputs_2d,
+          "proprio_3d": raw_proprio_inputs_3d,
+          "proprio_rot": raw_proprio_inputs_rot,
+          "proprio_handdof": raw_proprio_inputs_handdof,
+          "proprio_hand_finger_tip": raw_proprio_inputs_hand_finger_tip,
+          "action_label": raw_action_labels,
+        }
+        if raw_mano_token is not None:
+          traj_input_dict["mano_token"] = raw_mano_token
+
         if inference:
             action_output = self.get_traj_decoder().inference(
               action_output,
-              {
-                "proprio": raw_proprio_inputs,
-                "proprio_2d": raw_proprio_inputs_2d,
-                "proprio_3d": raw_proprio_inputs_3d,
-                "proprio_rot": raw_proprio_inputs_rot,
-                "proprio_handdof": raw_proprio_inputs_handdof,
-                "proprio_hand_finger_tip": raw_proprio_inputs_hand_finger_tip,
-                "action_label": raw_action_labels
-              },
+              traj_input_dict,
               memory=outputs.hidden_states[-1],
               # memory_mask=attention_mask,
               memory_mask=traj_decoder_mask,
@@ -306,15 +322,7 @@ class LlavaLlamaModel(LlavaMetaModel, LlavaMetaForCausalLM, PreTrainedModel):
         else:
           action_output = self.get_traj_decoder()(
             action_output,
-            {
-              "proprio": raw_proprio_inputs,
-              "proprio_2d": raw_proprio_inputs_2d,
-              "proprio_3d": raw_proprio_inputs_3d,
-              "proprio_rot": raw_proprio_inputs_rot,
-              "proprio_handdof": raw_proprio_inputs_handdof,
-              "proprio_hand_finger_tip": raw_proprio_inputs_hand_finger_tip,
-              "action_label": raw_action_labels
-            },
+            traj_input_dict,
             memory=outputs.hidden_states[-1],
             # memory_mask=attention_mask,
             memory_mask=traj_decoder_mask,

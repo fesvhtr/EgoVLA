@@ -635,7 +635,10 @@ hand_actuation_net = HandActuationNet(
 hand_actuation_net.load_state_dict(
     torch.load("hand_actuation_net.pth")
 )
-hand_actuation_net.to("cuda")
+# 统一使用cuda:0
+import torch
+_net_device = "cuda:0"
+hand_actuation_net.to(_net_device)
 
 
 hand_mano_retarget_net = HandActuationNet(
@@ -644,7 +647,7 @@ hand_mano_retarget_net = HandActuationNet(
 hand_mano_retarget_net.load_state_dict(
     torch.load("hand_mano_retarget_net.pth")
 )
-hand_mano_retarget_net.to("cuda")
+hand_mano_retarget_net.to(_net_device)
 
 from llava.model.language_model.rotation_convert import rot6d_to_rotmat, batch_axis2matrix, batch_matrix2axis
 
@@ -678,13 +681,13 @@ def ik_eval_single_step(
   use_rot_6d = True
 
   left_denormed_dof = denorm_hand_dof(
-    torch.tensor(pred_hand[:, 0, :])#.to("cuda").float()
-  ).to("cuda").float()
+    torch.tensor(pred_hand[:, 0, :])#.to("cuda:0").float()
+  ).to("cuda:0").float()
   left_denormed_dof[..., 6:] = 0
 
   right_denormed_dof = denorm_hand_dof(
-    torch.tensor(pred_hand[:, 1, :])#.to("cuda").float()
-  ).to("cuda").float()
+    torch.tensor(pred_hand[:, 1, :])#.to("cuda:0").float()
+  ).to("cuda:0").float()
   right_denormed_dof[..., 6:] = 0
 
   left_hand3d_kps_forretarget = mano_forward_retarget(

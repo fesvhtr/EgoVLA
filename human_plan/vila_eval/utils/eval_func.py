@@ -56,6 +56,13 @@ def eval_single_sample(
   data_dict["raw_proprio_inputs_hand_finger_tip"] = raw_data_dict["proprio_input_hand_finger_tip"].to(model.dtype).to(model.device)
   data_dict["raw_ee_movement_masks"] = raw_data_dict["ee_movement_mask"].to(model.dtype).to(model.device)
 
+  # Optional extra mano token (e.g. 55-dim feature). This is a draft hook:
+  # if you add "mano_token" into raw_data_dict later, it will be forwarded
+  # into the model; otherwise this key is simply absent and the old behavior
+  # is unchanged.
+  if "mano_token" in raw_data_dict:
+    data_dict["raw_mano_token"] = raw_data_dict["mano_token"].to(model.dtype).to(model.device)
+
   with torch.inference_mode():
       # with torch.eval():
       output = model.forward(**data_dict)

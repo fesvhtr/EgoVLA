@@ -78,7 +78,20 @@ def main():
     model, tokenizer, model_args, data_args, training_args = load_model_eval(
       model_args, data_args, training_args
     )
-    model.to("cuda")
+    # 统一使用cuda:0，避免设备不一致
+    import torch
+    model_device = "cuda:0"
+    print(f"所有组件统一使用设备: {model_device}")
+    
+    # 确保模型在正确设备上（如果还没移动）
+    if hasattr(model, 'device'):
+        print(f"模型当前设备: {model.device}")
+    else:
+        # 如果模型没有device属性，尝试移动到指定设备
+        try:
+            model = model.to(model_device)
+        except:
+            pass  # 如果模型已经分散到多个设备，跳过
 
     data_args.sep_query_token = model_args.sep_query_token
 
@@ -135,7 +148,11 @@ def main():
     left_ik_commands_robot = torch.zeros(env.scene.num_envs, left_ik_controller.action_dim, device=env.robot.device)
     right_ik_commands_world = torch.zeros(env.scene.num_envs, right_ik_controller.action_dim, device=env.robot.device)
     right_ik_commands_robot = torch.zeros(env.scene.num_envs, right_ik_controller.action_dim, device=env.robot.device)
-    action = torch.zeros((env.scene.num_envs, env.num_actions), device=env.robot.device)
+    # action = torch.zeros((env.scene.num_envs, env.num_actions), device=env.robot.device)
+    action = torch.zeros(
+    (env.scene.num_envs, env.action_space.shape[-1]),
+    device=env.robot.device,
+  )
 
     save_path = os.path.join(
       task_args.video_saving_path,
@@ -169,10 +186,12 @@ def main():
     padding = 0
 
     # with torch.inference_mode():
+    print(f"\n开始评估: {len(episode_list)} 个episodes, {task_args.num_trials} 个trials")
     for episode_idx in episode_list:
       for trial_idx in range(task_args.num_trials):
         # seq_name = f"episode_{episode_idx}.hdf5"
         seq_name = episode_idx[0]
+        print(f"\n处理 Episode: {seq_name}, Trial: {trial_idx+1}/{task_args.num_trials}")
 
         # 30 Hz
         rgb_obs_hist = deque(maxlen=120)
@@ -222,7 +241,8 @@ def main():
           left_dof = init_poses[load_name][seq_name][padding]["left_dof"]
           right_dof = init_poses[load_name][seq_name][padding]["right_dof"]
 
-          for idx in range(100):
+          print("初始化环境 (100步)...")
+          for idx in tqdm.tqdm(range(100), desc="初始化", ncols=80):
             left_dof = init_poses[load_name][seq_name][padding]["left_dof"]
             right_dof = init_poses[load_name][seq_name][padding]["right_dof"]
             
@@ -251,13 +271,15 @@ def main():
             rgb_obs = env_results[0]["fixed_rgb"][0].cpu().numpy()[:, :, :]
             rgb_obs = cv2.resize(rgb_obs, (384, 384))
         rgb_obs_hist.append(rgb_obs)
+        print("初始化完成，开始主循环...")
         count = padding
 
         result = False
         from human_plan.ego_bench_eval.utils import TASK_MAX_HORIZON
         max_horizon = TASK_MAX_HORIZON[task_args.task]
 
-        for i in tqdm.tqdm(range(max_horizon)):
+        print(f"主循环开始 (最大步数: {max_horizon})...")
+        for i in tqdm.tqdm(range(max_horizon), desc="主循环", ncols=80):
           # run everything in inference mode
           # obtain quantities from simulation
           rgb_obs = env_results[0]["fixed_rgb"][0].cpu().numpy()[:, :, :]
@@ -281,9 +303,11 @@ def main():
               task_args.task
           )
 
+          # 将数据移动到模型所在设备（统一使用cuda:0）
+          model_device = "cuda:0"
           raw_data_dict = process_input(
               rgb_obs_hist, 
-              proprio_input.to("cuda"),
+              proprio_input.to(model_device),
               raw_language_instruction,
               data_args, model_args, tokenizer
           )

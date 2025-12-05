@@ -12,7 +12,7 @@ video_saving_path=${11}
 additional_label=${12}
 use_per_step_instruction=${13}
 
-source /home/rchal97/code/clean_egovla/isaacsim/setup_conda_env.sh
+# source /home/rchal97/code/clean_egovla/isaacsim/setup_conda_env.sh
 
 LOG_ROOT=logs
 
@@ -50,7 +50,7 @@ python human_plan/ego_bench_eval/ik_agent_30hz.py \
     --eval_accumulation_steps 1 \
     --gradient_accumulation_steps 1 \
     --eval_data_mixture otv_sim_fixed_set_aug_AUG_SHIFT_30Hz_train_sub100 \
-    --evaluation_strategy "steps" \
+    --eval_strategy "steps" \
     --eval_steps 250 \
     --save_strategy "steps" \
     --save_steps 100 \

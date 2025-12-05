@@ -146,8 +146,8 @@ def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
     mask_c3 = (1 - mask_d2.float()) * (1 - mask_d0_nd1.float())
     mask_c0 = mask_c0.view(-1, 1).type_as(q0)
     mask_c1 = mask_c1.view(-1, 1).type_as(q1)
-    mask_c2 = mask_c2.view(-1, 1).type_as(q2)
-    mask_c3 = mask_c3.view(-1, 1).type_as(q3)
+    mask_c2 = mask_c2.view(-1, 1).type_as(q2)`
+    mask_c3 = mask_c3.view(-1, 1).type_as(q3)`
 
     q = q0 * mask_c0 + q1 * mask_c1 + q2 * mask_c2 + q3 * mask_c3
     q /= torch.sqrt(t0_rep * mask_c0 + t1_rep * mask_c1 +  # noqa

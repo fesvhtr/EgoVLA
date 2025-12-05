@@ -37,8 +37,14 @@ def load_model_eval(model_args, data_args, training_args):
 
   model_name = get_model_name_from_path(checkpoint_path)
 
+  # 明确指定设备为cuda:0，避免自动分配到多个GPU导致设备不一致
+  import torch
+  model_device = "cuda:0"
+  print(f"加载模型到设备: {model_device}")
   tokenizer, model, image_processor, context_len = load_pretrained_model(
       checkpoint_path, model_name, model_base,
+      device_map={"": model_device},  # 明确指定所有模型组件到同一设备
+      device=model_device,
       # load_4bit=False, load_8bit=False, use_flash_attn=True
   )
   if tokenizer.bos_token is None:

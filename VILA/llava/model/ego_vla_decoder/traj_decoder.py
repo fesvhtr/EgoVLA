@@ -30,13 +30,22 @@ class TrajDecoder(PreTrainedModel):
     self.sep_proprio = config.sep_proprio
     self.config = config
 
+    # NOTE: Optional extra mano token support (draft, backward compatible)
+    # If these fields do not exist in older configs, fall back to safe defaults.
+    self.extra_mano_dim = getattr(config, "extra_mano_dim", 0)
+    self.use_extra_mano_token = getattr(config, "use_extra_mano_token", False)
+
     if config.traj_decoder_type == "transformer_split_action_v2":
       self.decoder = TransformerSplitActV2(
         self.hidden_size, 
         self.proprio_size,
         self.out_dim,
         self.use_proprio,
-        self.sep_proprio
+        # NOTE: Optional extra mano token support (draft, backward compatible)
+        # If these fields do not exist in older configs, fall back to safe defaults.
+        self.sep_proprio,
+        extra_mano_dim=self.extra_mano_dim,
+        use_extra_mano_token=self.use_extra_mano_token,
       )
 
   def forward(

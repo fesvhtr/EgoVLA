@@ -43,6 +43,9 @@ class TransformerSplitActV2(nn.Module):
     use_proprio,
     # use_hand_input,
     sep_proprio,
+    # NOTE: Optional extra mano feature token (draft support)
+    extra_mano_dim: int = 0,
+    use_extra_mano_token: bool = False,
     **kwargs
   ):
     super().__init__()
@@ -51,6 +54,11 @@ class TransformerSplitActV2(nn.Module):
     self.sep_proprio = sep_proprio
 
     self.proprio_size = proprio_size
+
+  # NOTE: Whether to use an additional mano token, projected by an MLP and
+  # concatenated with the existing decoder input tokens.
+    self.extra_mano_dim = extra_mano_dim
+    self.use_extra_mano_token = use_extra_mano_token
 
     self.proprio_projection = nn.Sequential(
       nn.Linear(self.proprio_size, hidden_size),
@@ -70,6 +78,14 @@ class TransformerSplitActV2(nn.Module):
     )
     self.proprio_projection_hand = nn.Sequential(
       nn.Linear(5 * 3, hidden_size),
+      nn.ELU(),
+      nn.Linear(hidden_size, hidden_size)
+    )
+
+  # NOTE:Optional MLP for extra mano token (e.g., 55-dim feature)
+  if self.use_extra_mano_token and self.extra_mano_dim > 0:
+    self.proprio_projection_mano = nn.Sequential(
+      nn.Linear(self.extra_mano_dim, hidden_size),
       nn.ELU(),
       nn.Linear(hidden_size, hidden_size)
     )
@@ -116,6 +132,11 @@ class TransformerSplitActV2(nn.Module):
     for param in self.proprio_projection_hand.parameters():
       param.requires_grad = True
 
+  # NOTE: Extra mano projection, if enabled
+  if hasattr(self, "proprio_projection_mano"):
+    for param in self.proprio_projection_mano.parameters():
+      param.requires_grad = True
+
     # Output Projection
     for param in self.output_projection_left.parameters():
       param.requires_grad = True
@@ -150,17 +171,44 @@ class TransformerSplitActV2(nn.Module):
 
     if self.use_proprio:
       if self.sep_proprio:
-        latent = torch.cat([
-          # proprio_input_2d,
-          proprio_input_3d,
-          proprio_input_rot,
-          proprio_input_hand,
-          latent
-        ], dim=1)
+      prefix_tokens = [
+        # proprio_input_2d,
+        proprio_input_3d,
+        proprio_input_rot,
+        proprio_input_hand,
+      ]
+      # Optionally insert one extra mano token at the front
+      if self.use_extra_mano_token and "mano_token" in input_dict and hasattr(self, "proprio_projection_mano"):
+        mano_feat = input_dict["mano_token"]
+        # Expect shape (B, D_mano); allow (B, 1, D_mano) as well in a loose way.
+        if mano_feat.dim() == 2:
+          mano_emb = self.proprio_projection_mano(mano_feat).unsqueeze(1)
+        elif mano_feat.dim() == 3:
+          # Flatten any temporal dimension into token dimension (draft behavior)
+          B, T, D = mano_feat.shape
+          mano_emb = self.proprio_projection_mano(mano_feat.reshape(B * T, D)).reshape(B, T, -1)
+        else:
+          mano_emb = None
+        if mano_emb is not None:
+          prefix_tokens = [mano_emb] + prefix_tokens
+
+      latent = torch.cat(prefix_tokens + [latent], dim=1)
       else:
-        latent = torch.cat([
-          proprio_input, latent
-        ], dim=1)
+      # Simple (non-split) case: append mano token after the main proprio token.
+      cat_list = [proprio_input]
+      if self.use_extra_mano_token and "mano_token" in input_dict and hasattr(self, "proprio_projection_mano"):
+        mano_feat = input_dict["mano_token"]
+        if mano_feat.dim() == 2:
+          mano_emb = self.proprio_projection_mano(mano_feat).unsqueeze(1)
+        elif mano_feat.dim() == 3:
+          B, T, D = mano_feat.shape
+          mano_emb = self.proprio_projection_mano(mano_feat.reshape(B * T, D)).reshape(B, T, -1)
+        else:
+          mano_emb = None
+        if mano_emb is not None:
+          cat_list.append(mano_emb)
+      cat_list.append(latent)
+      latent = torch.cat(cat_list, dim=1)
 
 
     batch_size, latent_len, _ = latent.shape
@@ -202,9 +250,19 @@ class TransformerSplitActV2(nn.Module):
 
     if self.use_proprio:
       if self.sep_proprio:
-        latent = latent[:, 6:, :]
+      # For split-proprio case we previously had exactly 6 prefix tokens
+      # (2 for 3D, 2 for rot, 2 for hand). If we insert an extra mano token,
+      # we need to skip one more token here.
+      num_prefix_tokens = 6
+      if self.use_extra_mano_token and "mano_token" in input_dict and hasattr(self, "proprio_projection_mano"):
+        num_prefix_tokens += 1
+      latent = latent[:, num_prefix_tokens:, :]
       else:
-        latent = latent[:, 1:, :]
+      # For non-split case we previously had 1 prefix token (proprio).
+      num_prefix_tokens = 1
+      if self.use_extra_mano_token and "mano_token" in input_dict and hasattr(self, "proprio_projection_mano"):
+        num_prefix_tokens += 1
+      latent = latent[:, num_prefix_tokens:, :]
  
     out_left = self.output_projection_left(
       latent[:, ::2]
